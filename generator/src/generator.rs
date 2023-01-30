@@ -185,38 +185,54 @@ fn generate_include(name: &Ident, path: &str) -> TokenStream {
 }
 
 fn generate_enum(rules: &[OptimizedRule], doc_comment: &DocComment, uses_eoi: bool) -> TokenStream {
-    let rules = rules.iter().map(|rule| {
-        let rule_name = format_ident!("r#{}", rule.name);
+    let mut rule_names: Vec<String> = rules
+        .iter()
+        .map(|rule| rule.name.to_string())
+        .collect::<_>();
 
-        match doc_comment.line_docs.get(&rule.name) {
+    if uses_eoi {
+        rule_names.push("EOI".to_string());
+    }
+
+    let rule_names = rule_names.clone();
+
+    let rules = rule_names.iter().map(|name| {
+        let rule = format_ident!("r#{}", name);
+
+        match doc_comment.line_docs.get(name) {
             Some(doc) => quote! {
                 #[doc = #doc]
-                #rule_name
+                #rule
             },
             None => quote! {
-                #rule_name
+                #rule
             },
         }
     });
 
-    let grammar_doc = &doc_comment.grammar_doc;
-    if uses_eoi {
+    let rule_names = rule_names.iter().map(|name| {
+        let rule = format_ident!("r#{}", name);
+
         quote! {
-            #[doc = #grammar_doc]
-            #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
-            #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-            pub enum Rule {
-                EOI,
-                #( #rules ),*
-            }
+            Rule::#rule => #name
         }
-    } else {
-        quote! {
-            #[doc = #grammar_doc]
-            #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
-            #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-            pub enum Rule {
-                #( #rules ),*
+    });
+
+    let grammar_doc = &doc_comment.grammar_doc;
+
+    quote! {
+        #[doc = #grammar_doc]
+        #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
+        #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+        pub enum Rule {
+            #( #rules ),*
+        }
+
+        impl Rule {
+            pub fn as_str(&self) -> &'static str {
+                match *self {
+                    #( #rule_names ),*
+                }
             }
         }
     }
@@ -708,6 +724,14 @@ mod tests {
                     #[doc = "This is rule comment"]
                     r#f
                 }
+
+                impl Rule {
+                    pub fn as_str(&self) -> &'static str {
+                        match *self {
+                            Rule::r#f => "f"
+                        }
+                    }
+                }
             }
             .to_string()
         );
@@ -1032,6 +1056,15 @@ mod tests {
                     r#a,
                     #[doc = "If statement"]
                     r#if
+                }
+
+                impl Rule {
+                    pub fn as_str(&self) -> &'static str {
+                        match *self {
+                            Rule::r#a => "a",
+                            Rule::r#if => "if"
+                        }
+                    }
                 }
 
                 #[allow(clippy::all)]

@@ -186,6 +186,12 @@ fn examples() {
     assert_eq!(expected.trim(), out.trim());
 }
 
+#[test]
+fn test_rule_as_str() {
+    assert_eq!("json", Rule::json.as_str());
+    assert_eq!("object", Rule::object.as_str());
+}
+
 fn build_line_col(line_col: (usize, usize), str: &str) -> String {
     format!(
         "({}:{}) {}\n",
