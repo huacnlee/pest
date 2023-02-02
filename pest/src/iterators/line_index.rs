@@ -16,8 +16,7 @@ pub struct LineIndex {
 
 impl LineIndex {
     pub fn new(text: &str) -> LineIndex {
-        let mut line_offsets: Vec<usize> = Vec::new();
-        line_offsets.push(0);
+        let mut line_offsets: Vec<usize> = alloc::vec![0];
 
         let mut offset = 0;
 

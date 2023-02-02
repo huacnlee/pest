@@ -55,6 +55,10 @@ inner_string = @{ ("\"" ~ (!(NEWLINE | "\"") ~ ANY)* ~ "\"") }
 // pair.line_col (with LineIndex)               time:   [41.160 µs 41.969 µs 43.478 µs]
 // position.line_col                            time:   [1.7199 ms 1.7246 ms 1.7315 ms]
 // position.line_col (with fast-line-col)       time:   [48.498 µs 49.450 µs 50.877 µs]
+//
+// With 10K times iter
+// pair.line_col                                time:   [471.75 µs 475.03 µs 478.94 µs]
+// position.line_col (with fast-line-col)       time:   [8.1941 ms 8.3278 ms 8.5144 ms]
 fn bench_line_col(c: &mut Criterion) {
     let data = include_str!("main.i18n.json");
     let pairs = autocorrect::JsonParser::parse(autocorrect::Rule::item, &data)
@@ -64,7 +68,7 @@ fn bench_line_col(c: &mut Criterion) {
     c.bench_function("pair.line_col", |b| {
         b.iter(|| {
             let mut pairs = pairs.clone();
-            for _ in 0..500 {
+            for _ in 0..1000 {
                 pairs.next().unwrap().line_col();
             }
         })
@@ -73,7 +77,7 @@ fn bench_line_col(c: &mut Criterion) {
     c.bench_function("position.line_col", |b| {
         b.iter(|| {
             let mut pairs = pairs.clone();
-            for _ in 0..500 {
+            for _ in 0..1000 {
                 pairs.next().unwrap().as_span().start_pos().line_col();
             }
         });
