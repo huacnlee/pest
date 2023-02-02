@@ -29,7 +29,7 @@ pub struct FlatPairs<'i, R> {
     input: &'i str,
     start: usize,
     end: usize,
-    line_index: Rc<LineIndex>,
+    pub(super) line_index: Option<Rc<LineIndex>>,
 }
 
 /// # Safety
@@ -44,7 +44,7 @@ pub unsafe fn new<R: RuleType>(
     FlatPairs {
         queue,
         input,
-        line_index: Rc::new(LineIndex::new(input)),
+        line_index: None,
         start,
         end,
     }
@@ -114,7 +114,7 @@ impl<'i, R: RuleType> Iterator for FlatPairs<'i, R> {
             pair::new(
                 Rc::clone(&self.queue),
                 self.input,
-                Rc::clone(&self.line_index),
+                rc_clone_line_index(&self.line_index),
                 self.start,
             )
         };
@@ -136,7 +136,7 @@ impl<'i, R: RuleType> DoubleEndedIterator for FlatPairs<'i, R> {
             pair::new(
                 Rc::clone(&self.queue),
                 self.input,
-                Rc::clone(&self.line_index),
+                rc_clone_line_index(&self.line_index),
                 self.end,
             )
         };
@@ -158,10 +158,18 @@ impl<'i, R: Clone> Clone for FlatPairs<'i, R> {
         FlatPairs {
             queue: Rc::clone(&self.queue),
             input: self.input,
-            line_index: Rc::clone(&self.line_index),
+            line_index: rc_clone_line_index(&self.line_index),
             start: self.start,
             end: self.end,
         }
+    }
+}
+
+#[inline]
+fn rc_clone_line_index(line_index: &Option<Rc<LineIndex>>) -> Option<Rc<LineIndex>> {
+    match line_index {
+        Some(ref line_index) => Some(Rc::clone(line_index)),
+        None => None,
     }
 }
 

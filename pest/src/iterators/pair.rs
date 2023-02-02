@@ -21,6 +21,7 @@ use core::str;
 use serde::ser::SerializeStruct;
 
 use super::line_index::LineIndex;
+use super::locate_pairs::{self, LocatablePairs};
 use super::pairs::{self, Pairs};
 use super::queueable_token::QueueableToken;
 use super::tokens::{self, Tokens};
@@ -44,7 +45,7 @@ pub struct Pair<'i, R> {
     input: &'i str,
     /// Token index into `queue`.
     start: usize,
-    line_index: Rc<LineIndex>,
+    line_index: Option<Rc<LineIndex>>,
 }
 
 /// # Safety
@@ -53,7 +54,7 @@ pub struct Pair<'i, R> {
 pub unsafe fn new<R: RuleType>(
     queue: Rc<Vec<QueueableToken<R>>>,
     input: &str,
-    line_index: Rc<LineIndex>,
+    line_index: Option<Rc<LineIndex>>,
     start: usize,
 ) -> Pair<'_, R> {
     Pair {
@@ -206,13 +207,16 @@ impl<'i, R: RuleType> Pair<'i, R> {
     pub fn into_inner(self) -> Pairs<'i, R> {
         let pair = self.pair();
 
-        pairs::new(
-            self.queue,
-            self.input,
-            Some(self.line_index),
-            self.start + 1,
-            pair,
-        )
+        match self.line_index {
+            Some(_) => pairs::new(
+                self.queue,
+                self.input,
+                self.line_index,
+                self.start + 1,
+                pair,
+            ),
+            None => pairs::new(self.queue, self.input, None, self.start + 1, pair),
+        }
     }
 
     /// Returns the `Tokens` for the `Pair`.
@@ -254,7 +258,10 @@ impl<'i, R: RuleType> Pair<'i, R> {
     /// Returns the `line`, `col` of this pair start.
     pub fn line_col(&self) -> (usize, usize) {
         let pos = self.pos(self.start);
-        self.line_index.line_col(self.input, pos)
+        match self.line_index {
+            Some(ref line_index) => line_index.line_col(self.input, pos),
+            None => self.as_span().start_pos().line_col(),
+        }
     }
 
     fn pair(&self) -> usize {
@@ -279,13 +286,8 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     /// Create a new `Pairs` iterator containing just the single `Pair`.
     pub fn single(pair: Pair<'i, R>) -> Self {
         let end = pair.pair();
-        pairs::new(
-            pair.queue,
-            pair.input,
-            Some(pair.line_index),
-            pair.start,
-            end,
-        )
+
+        pairs::new(pair.queue, pair.input, pair.start, end)
     }
 }
 

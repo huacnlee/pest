@@ -97,11 +97,13 @@ fn bench_pairs_iter(c: &mut Criterion) {
         }
     }
 
+    // Test pairs nested iter, because when call `into_iter`, `LineIndex` will create ref to child pairs.
     c.bench_function("pairs nested iter", |b| {
         let pairs = autocorrect::JsonParser::parse(autocorrect::Rule::item, &data).unwrap();
         b.iter(move || iter_all_pairs(pairs.clone()));
     });
 
+    // Test flatten iterate pairs, `LineIndex` in this case just call once at root pairs created.
     c.bench_function("pairs flatten iter", |b| {
         let pairs = autocorrect::JsonParser::parse(autocorrect::Rule::item, &data).unwrap();
 

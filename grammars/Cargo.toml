@@ -14,7 +14,7 @@ readme = "_README.md"
 rust-version = "1.56"
 
 [dependencies]
-pest = { path = "../pest", version = "2.5.4" }
+pest = { path = "../pest", version = "2.5.4", features= ["fast-line-col"] }
 pest_derive = { path = "../derive", version = "2.5.4" }
 
 [dev-dependencies]

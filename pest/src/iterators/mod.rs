@@ -11,6 +11,7 @@
 
 mod flat_pairs;
 mod line_index;
+mod locate_pairs;
 mod pair;
 pub(crate) mod pairs;
 mod queueable_token;

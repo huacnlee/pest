@@ -20,7 +20,7 @@ use core::str;
 use serde::ser::SerializeStruct;
 
 use super::flat_pairs::{self, FlatPairs};
-use super::line_index::LineIndex;
+use super::locate_pairs::{self, LocatablePairs};
 use super::pair::{self, Pair};
 use super::queueable_token::QueueableToken;
 use super::tokens::{self, Tokens};
@@ -37,27 +37,19 @@ pub struct Pairs<'i, R> {
     input: &'i str,
     start: usize,
     end: usize,
-    line_index: Rc<LineIndex>,
 }
 
 pub fn new<R: RuleType>(
     queue: Rc<Vec<QueueableToken<R>>>,
     input: &str,
-    line_index: Option<Rc<LineIndex>>,
     start: usize,
     end: usize,
 ) -> Pairs<'_, R> {
-    let line_index = match line_index {
-        Some(line_index) => line_index,
-        None => Rc::new(LineIndex::new(input)),
-    };
-
     Pairs {
         queue,
         input,
         start,
         end,
-        line_index,
     }
 }
 
@@ -159,6 +151,36 @@ impl<'i, R: RuleType> Pairs<'i, R> {
         unsafe { flat_pairs::new(self.queue, self.input, self.start, self.end) }
     }
 
+    /// Locatable the `Pairs`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use std::rc::Rc;
+    /// # use pest;
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {
+    ///     a,
+    ///     b
+    /// }
+    ///
+    /// let input = "";
+    /// let pairs = pest::state(input, |state| {
+    ///     // generating nested Token pair with Rule::b inside Rule::a
+    /// #     state.rule(Rule::a, |state| {
+    /// #         state.rule(Rule::b, |s| Ok(s))
+    /// #     })
+    /// }).unwrap().locatable();
+    /// let pair = pairs.next();
+    ///
+    /// assert_eq!(pair.line_col(), (0, 0));
+    /// ```
+    #[inline]
+    pub fn locatable(self) -> LocatablePairs<'i, R> {
+        unsafe { locate_pairs::new(self.queue, self.input, self.start, self.end) }
+    }
+
     /// Returns the `Tokens` for the `Pairs`.
     ///
     /// # Examples
@@ -190,14 +212,7 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     #[inline]
     pub fn peek(&self) -> Option<Pair<'i, R>> {
         if self.start < self.end {
-            Some(unsafe {
-                pair::new(
-                    Rc::clone(&self.queue),
-                    self.input,
-                    Rc::clone(&self.line_index),
-                    self.start,
-                )
-            })
+            Some(unsafe { pair::new(Rc::clone(&self.queue), self.input, None, self.start) })
         } else {
             None
         }
@@ -256,14 +271,7 @@ impl<'i, R: RuleType> DoubleEndedIterator for Pairs<'i, R> {
 
         self.end = self.pair_from_end();
 
-        let pair = unsafe {
-            pair::new(
-                Rc::clone(&self.queue),
-                self.input,
-                Rc::clone(&self.line_index),
-                self.end,
-            )
-        };
+        let pair = unsafe { pair::new(Rc::clone(&self.queue), self.input, None, self.end) };
 
         Some(pair)
     }
