@@ -50,6 +50,14 @@ pub mod toml {
     pub struct TomlParser;
 }
 
+/// Grammar rules of a sample Other special cases parser
+pub mod other {
+    /// Other parser.
+    #[derive(Parser)]
+    #[grammar = "grammars/other.pest"]
+    pub struct OtherParser;
+}
+
 #[cfg(test)]
 mod tests {
     use std::convert::TryInto;

@@ -46,20 +46,28 @@ pub fn unroll(rule: Rule) -> Rule {
                     Some(rep) => Some(Expr::Seq(Box::new(expr), Box::new(rep))),
                 })
                 .unwrap(),
-            Expr::RepMinMax(expr, min, max) => (1..max + 1)
-                .map(|i| {
-                    if i <= min {
-                        *expr.clone()
-                    } else {
-                        Expr::Opt(expr.clone())
-                    }
-                })
-                .rev()
-                .fold(None, |rep, expr| match rep {
-                    None => Some(expr),
-                    Some(rep) => Some(Expr::Seq(Box::new(expr), Box::new(rep))),
-                })
-                .unwrap(),
+            Expr::RepMinMax(expr, min, max) => {
+                if max > 64 {
+                    // panic!("max must be <= 255");
+                    return *expr.clone();
+                }
+
+                (1..max + 1)
+                    .map(|i| {
+                        std::println!("---- {:?}", expr);
+                        if i <= min {
+                            *expr.clone()
+                        } else {
+                            Expr::Opt(expr.clone())
+                        }
+                    })
+                    .rev()
+                    .fold(None, |rep, expr| match rep {
+                        None => Some(expr),
+                        Some(rep) => Some(Expr::Seq(Box::new(expr), Box::new(rep))),
+                    })
+                    .unwrap()
+            }
             expr => expr,
         }),
     }

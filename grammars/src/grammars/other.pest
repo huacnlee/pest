@@ -1,0 +1,3 @@
+// Test for `rep_min_max` with a large max value.
+rep_min_max = { NUMBER{1,10} }
+rep_min_max_large = { NUMBER{1,100} }
